@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>학교 탈출! (업그레이드)</title>
+<style>
+html, body { margin:0; padding:0; overflow:hidden; background:#111; }
+canvas { display:block; }
+#ui { position:absolute; top:10px; left:10px; color:#fff; font-size:18px; }
+#over { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); display:none; color:#fff; text-align:center; }
+button { padding:10px 20px; font-size:16px; }
+</style>
+</head>
+<body>
+<div id="ui">점수: 0 | ❤️ 3</div>
+<div id="over">
+<h1>게임 오버</h1>
+<p id="final"></p>
+<button onclick="init()">다시 시작</button>
+</div>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const ui = document.getElementById('ui');
+const over = document.getElementById('over');
+
+let w,h,player,obs,items,score,lives,active;
+
+function resize(){ w=canvas.width=window.innerWidth; h=canvas.height=window.innerHeight; }
+
+function init(){
+ resize();
+ player={x:w/2,y:h-100,r:20,tx:w/2,shield:0};
+ obs=[]; items=[];
+ score=0; lives=3; active=true;
+ over.style.display='none';
+ loop();
+}
+
+window.addEventListener('mousemove',e=>player.tx=e.clientX);
+
+function spawnObstacle(){
+ obs.push({x:Math.random()*w,y:-20,s:4+Math.random()*3});
+}
+
+function spawnItem(){
+ const types=['❤️','⚡','🛡️'];
+ items.push({x:Math.random()*w,y:-20,type:types[Math.floor(Math.random()*types.length)],s:3});
+}
+
+function loop(){
+ if(!active) return;
+ ctx.clearRect(0,0,w,h);
+
+ // 학교 배경 그리기
+ // 하늘
+ ctx.fillStyle = '#87CEEB';
+ ctx.fillRect(0,0,w,h);
+
+ // 학교 건물
+ ctx.fillStyle = '#ddd';
+ ctx.fillRect(w*0.2,h*0.2,w*0.6,h*0.3);
+
+ // 창문
+ ctx.fillStyle = '#aaddff';
+ for(let i=0;i<5;i++){
+   for(let j=0;j<2;j++){
+     ctx.fillRect(w*0.25 + i*(w*0.1), h*0.25 + j*(h*0.1), 40, 40);
+   }
+ }
+
+ // 운동장
+ ctx.fillStyle = '#4caf50';
+ ctx.fillRect(0,h*0.5,w,h*0.5);
+
+ // 트랙 라인
+ ctx.strokeStyle = '#ffffff';
+ ctx.beginPath();
+ ctx.arc(w/2,h*0.75,200,0,Math.PI*2);
+ ctx.stroke();
+ 
+ // 이동
+ player.x += (player.tx-player.x)*0.1;
+ 
+ // 플레이어
+ ctx.font='30px Arial';
+ ctx.fillText('🏃',player.x,player.y);
+ 
+ // 장애물
+ if(Math.random()<0.03) spawnObstacle();
+ obs.forEach((o,i)=>{
+   o.y+=o.s;
+   ctx.fillText('👨‍🏫',o.x,o.y);
+   if(Math.hypot(player.x-o.x,player.y-o.y)<30){
+     if(player.shield>0){ player.shield=0; }
+     else{
+       lives--;
+       obs.splice(i,1);
+       if(lives<=0) gameOver();
+     }
+   }
+   if(o.y>h) { obs.splice(i,1); score++; }
+ });
+ 
+ // 아이템
+ if(Math.random()<0.01) spawnItem();
+ items.forEach((it,i)=>{
+   it.y+=it.s;
+   ctx.fillText(it.type,it.x,it.y);
+   if(Math.hypot(player.x-it.x,player.y-it.y)<30){
+     if(it.type==='❤️') lives++;
+     if(it.type==='⚡') score+=5;
+     if(it.type==='🛡️') player.shield=200;
+     items.splice(i,1);
+   }
+ });
+ 
+ // 보호막 표시
+ if(player.shield>0){
+   ctx.beginPath();
+   ctx.arc(player.x,player.y-10,25,0,Math.PI*2);
+   ctx.strokeStyle='cyan';
+   ctx.stroke();
+   player.shield--;
+ }
+ 
+ ui.innerText=`점수: ${score} | ❤️ ${lives}`;
+ requestAnimationFrame(loop);
+}
+
+function gameOver(){
+ active=false;
+ document.getElementById('final').innerText='점수: '+score;
+ over.style.display='block';
+}
+
+window.onload=init;
+window.onresize=resize;
+</script>
+</body>
+</html>
